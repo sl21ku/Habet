@@ -106,6 +106,8 @@ struct HabetWidget: Widget {
 struct HabetWidgetBundle: WidgetBundle {
     var body: some Widget {
         HabetWidget()
+        #if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
         HabetWidgetLiveActivity()
+        #endif
     }
 }

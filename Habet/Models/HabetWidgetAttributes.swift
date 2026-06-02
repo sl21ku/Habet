@@ -1,3 +1,4 @@
+#if canImport(ActivityKit)
 import ActivityKit
 import Foundation
 
@@ -12,3 +13,4 @@ struct HabetWidgetAttributes: ActivityAttributes {
     // Static properties that do not change
     var totalChips: Int
 }
+#endif

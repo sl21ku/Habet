@@ -1,3 +1,4 @@
+#if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
 import ActivityKit
 import WidgetKit
 import SwiftUI
@@ -77,3 +78,4 @@ struct HabetWidgetLiveActivity: Widget {
         }
     }
 }
+#endif

@@ -1,4 +1,6 @@
+#if canImport(ActivityKit)
 import ActivityKit
+#endif
 import Foundation
 
 final class ActivityService {
@@ -6,12 +8,12 @@ final class ActivityService {
 
     private init() {}
 
-    private var activeActivity: Any? // Keep it type-erased to prevent strict dependency issues in unit tests if needed, but we cast it internally
+    private var activeActivity: Any?
 
     func startLiveActivity(habitName: String, chipsWagered: Int, totalChips: Int, durationSeconds: Double) {
+        #if canImport(ActivityKit)
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
-        // End any existing live activity first
         endLiveActivity()
 
         let attributes = HabetWidgetAttributes(totalChips: totalChips)
@@ -24,7 +26,7 @@ final class ActivityService {
         do {
             let activity = try Activity.request(
                 attributes: attributes,
-                content: .init(state: initialContentState, staleDate: nil),
+                content: ActivityContent<HabetWidgetAttributes.ContentState>(state: initialContentState, staleDate: nil),
                 pushType: nil
             )
             self.activeActivity = activity
@@ -32,9 +34,11 @@ final class ActivityService {
         } catch {
             print("Error starting Live Activity: \(error.localizedDescription)")
         }
+        #endif
     }
 
     func updateLiveActivity(habitName: String, chipsWagered: Int, targetEndDate: Date) {
+        #if canImport(ActivityKit)
         guard let activity = activeActivity as? Activity<HabetWidgetAttributes> else { return }
 
         let updatedState = HabetWidgetAttributes.ContentState(
@@ -44,12 +48,14 @@ final class ActivityService {
         )
 
         Task {
-            await activity.update(.init(state: updatedState, staleDate: nil))
+            await activity.update(ActivityContent(state: updatedState, staleDate: nil))
             print("Updated Live Activity: \(activity.id)")
         }
+        #endif
     }
 
     func endLiveActivity() {
+        #if canImport(ActivityKit)
         guard let activity = activeActivity as? Activity<HabetWidgetAttributes> else { return }
 
         let finalState = HabetWidgetAttributes.ContentState(
@@ -59,9 +65,10 @@ final class ActivityService {
         )
 
         Task {
-            await activity.end(.init(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
+            await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
             self.activeActivity = nil
             print("Ended Live Activity: \(activity.id)")
         }
+        #endif
     }
 }
