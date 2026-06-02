@@ -1,5 +1,7 @@
 import SwiftData
 import SwiftUI
+import PhotosUI
+import UIKit
 
 struct ActiveBetCard: View {
     let bet: HabitBetModel
@@ -372,7 +374,7 @@ struct PhotoProofView: View {
                     }
                 }
             }
-            .onChange(of: selectedItem) { newItem in
+            .onChange(of: selectedItem) { _, newItem in
                 Task {
                     guard let item = newItem else { return }
                     isAnalyzing = true
