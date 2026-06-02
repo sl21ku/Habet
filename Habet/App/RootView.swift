@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootView: View {
     @Query private var statsList: [UserStatsModel]
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedTab = 0
 
     private var currentTheme: AppTheme {
@@ -44,5 +45,8 @@ struct RootView: View {
         }
         .appTheme(currentTheme)
         .tint(currentTheme.primaryColor)
+        .onAppear {
+            DemoDataService.seedIfNeeded(modelContext: modelContext)
+        }
     }
 }

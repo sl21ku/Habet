@@ -4,10 +4,12 @@ import SwiftUI
 struct BetSetupView: View {
     @Binding var selectedTab: Int
 
-    @Query(filter: #Predicate<HabitBetModel> { !$0.isCompleted })
-    private var activeBets: [HabitBetModel]
-
+    @Query private var allBets: [HabitBetModel]
     @Query private var statsList: [UserStatsModel]
+
+    private var activeBets: [HabitBetModel] {
+        allBets.filter { !$0.isCompleted }
+    }
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.appTheme) private var theme

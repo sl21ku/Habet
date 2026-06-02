@@ -4,17 +4,18 @@ import SwiftUI
 struct HomeView: View {
     @Binding var selectedTab: Int
 
-    @Query(filter: #Predicate<HabitBetModel> { !$0.isCompleted })
-    private var activeBets: [HabitBetModel]
-
-    @Query(
-        filter: #Predicate<HabitBetModel> { $0.isCompleted },
-        sort: \HabitBetModel.endDate,
-        order: .reverse
-    )
-    private var completedBets: [HabitBetModel]
+    @Query(sort: \HabitBetModel.endDate, order: .reverse)
+    private var allBets: [HabitBetModel]
 
     @Query private var statsList: [UserStatsModel]
+
+    private var activeBets: [HabitBetModel] {
+        allBets.filter { !$0.isCompleted }
+    }
+
+    private var completedBets: [HabitBetModel] {
+        allBets.filter { $0.isCompleted }
+    }
 
     @Environment(\.appTheme) private var theme
 

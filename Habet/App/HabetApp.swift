@@ -8,9 +8,6 @@ struct HabetApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .onAppear {
-                    DemoDataService.seedIfNeeded(modelContext: modelContainer.mainContext)
-                }
         }
         .modelContainer(modelContainer)
     }

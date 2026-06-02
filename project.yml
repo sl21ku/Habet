@@ -42,6 +42,8 @@ targets:
     sources:
       - HabetWidgetExtension
       - Habet/Models/HabetWidgetAttributes.swift
+      - Habet/Models/UserStatsModel.swift
+      - Habet/Models/HabitBetModel.swift
     info:
       path: HabetWidgetExtension/Info.plist
       properties:
