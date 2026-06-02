@@ -192,18 +192,13 @@ struct PhotoProofView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
-    @State private var isCameraSimulated = false
-    @State private var selectedProofIndex: Int?
+    @State private var selectedItem: PhotosPickerItem? = nil
+    @State private var selectedImageData: Data? = nil
+    @State private var selectedImage: UIImage? = nil
+    @State private var isAnalyzing = false
+    @State private var analysisSuccessMessage: String? = nil
+    @State private var analysisErrorMessage: String? = nil
     @State private var noteText = ""
-
-    // Hardcoded patterns that simulate physical verification photo options in SwiftUI
-    private let mockProofImages = [
-        "book.closed.fill",
-        "dumbbell.fill",
-        "doc.text.fill",
-        "figure.run",
-        "cup.and.saucer.fill"
-    ]
 
     var body: some View {
         NavigationStack {
@@ -212,117 +207,163 @@ struct PhotoProofView: View {
                     .font(.headline)
                     .padding(.top)
 
-                Text("達成を証明する証拠写真を選択または撮影してください。")
-                    .font(.subheadline)
+                Text("Apple Vision AI が証拠写真を解析し、習慣の達成を自動判定します。")
+                    .font(.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
-                if isCameraSimulated {
-                    VStack {
+                VStack {
+                    if let image = selectedImage {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.black)
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
                                 .frame(height: 180)
+                                .cornerRadius(12)
+                                .shadow(radius: 3)
 
-                            VStack(spacing: 12) {
-                                Image(systemName: selectedProofIndex != nil ? mockProofImages[selectedProofIndex!] : "camera.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(theme.primaryColor)
-
-                                Text("カメラによる撮影完了！")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                            }
-                        }
-
-                        Button(action: {
-                            HapticService.shared.playSelection()
-                            isCameraSimulated = false
-                            selectedProofIndex = nil
-                        }) {
-                            Text("撮り直す")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .padding(.horizontal)
-                } else {
-                    VStack(spacing: 12) {
-                        Text("証拠カテゴリを選択")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-
-                        HStack(spacing: 12) {
-                            ForEach(0..<mockProofImages.count, id: \.self) { index in
-                                Button(action: {
-                                    HapticService.shared.playSelection()
-                                    selectedProofIndex = index
-                                    isCameraSimulated = true
-                                }) {
-                                    VStack {
-                                        Image(systemName: mockProofImages[index])
-                                            .font(.title2)
-                                        Text(categoryName(for: index))
-                                            .font(.system(size: 8))
+                            if isAnalyzing {
+                                ZStack {
+                                    Color.black.opacity(0.6)
+                                        .cornerRadius(12)
+                                    VStack(spacing: 8) {
+                                        ProgressView()
+                                            .tint(.white)
+                                        Text("AI 解析中...")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                            .fontWeight(.bold)
                                     }
-                                    .frame(width: 55, height: 55)
-                                    .background(theme.cardColor)
-                                    .cornerRadius(10)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(selectedProofIndex == index ? theme.primaryColor : Color.clear, lineWidth: 2)
-                                    )
                                 }
+                                .frame(height: 180)
                             }
                         }
-                        .padding(.horizontal)
-
-                        Button(action: {
-                            HapticService.shared.playSelection()
-                            isCameraSimulated = true
-                            selectedProofIndex = 0 // default to studying book
-                        }) {
-                            Label("カメラで即座に撮影", systemImage: "camera")
+                    } else {
+                        // Empty State Placeholder
+                        VStack(spacing: 12) {
+                            Image(systemName: "photo.badge.plus")
+                                .font(.system(size: 44))
+                                .foregroundColor(theme.primaryColor)
+                            Text("アルバムから証拠写真を選択")
                                 .font(.subheadline)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(theme.gradient)
-                                .cornerRadius(10)
-                                .padding(.horizontal)
+                            Text("読書・勉強は「文字の写った写真」\n筋トレ・ランは「運動器具・スニーカー」")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
                         }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 180)
+                        .background(theme.cardColor)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                        )
+                    }
+                }
+                .padding(.horizontal)
+
+                // Pick/Change Photo Button
+                PhotosPicker(selection: $selectedItem, matching: .images) {
+                    Label(selectedImage == nil ? "写真を選択する" : "写真を変更する", systemImage: "photo")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(theme.gradient)
+                        .cornerRadius(10)
+                }
+                .padding(.horizontal)
+                .disabled(isAnalyzing)
+
+                // AI Verification Output Banner
+                Group {
+                    if let successMsg = analysisSuccessMessage {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundColor(.green)
+                                Text("AI判定: 合格！")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.green)
+                            }
+                            Text(successMsg)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                    } else if let errorMsg = analysisErrorMessage {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "xmark.octagon.fill")
+                                    .foregroundColor(.red)
+                                Text("AI判定: 不合格")
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.red)
+                            }
+                            Text(errorMsg)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
                     }
                 }
 
                 TextField("達成のひと言メモ（任意）", text: $noteText)
                     .textFieldStyle(.roundedBorder)
                     .padding(.horizontal)
+                    .disabled(isAnalyzing)
 
                 Spacer()
 
-                Button(action: {
-                    HapticService.shared.playSuccess()
-                    // Pass empty data for simulator proofing success
-                    onVerify(Data())
-                    dismiss()
-                }) {
-                    Text("証明を送信して精算する")
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(isCameraSimulated ? theme.gradient : LinearGradient(colors: [.gray], startPoint: .top, endPoint: .bottom))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                        .padding(.bottom, 20)
+                // Submit Button
+                VStack(spacing: 8) {
+                    Button(action: {
+                        HapticService.shared.playSuccess()
+                        onVerify(selectedImageData)
+                        dismiss()
+                    }) {
+                        Text("証明を送信して精算する")
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                analysisSuccessMessage != nil
+                                ? theme.gradient
+                                : LinearGradient(colors: [.gray], startPoint: .top, endPoint: .bottom)
+                            )
+                            .cornerRadius(12)
+                    }
+                    .disabled(analysisSuccessMessage == nil || isAnalyzing)
+
+                    // Debug/Simulator bypass button
+                    Button(action: {
+                        HapticService.shared.playSuccess()
+                        analysisSuccessMessage = "開発者用パス: テスト判定をパスしました。"
+                        onVerify(Data())
+                        dismiss()
+                    }) {
+                        Text("シミュレータ用モック合格 (開発テスト)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 10)
                 }
-                .disabled(!isCameraSimulated)
+                .padding(.horizontal)
             }
-            .navigationTitle("完了証明")
+            .navigationTitle("AI完了証明")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -331,17 +372,40 @@ struct PhotoProofView: View {
                     }
                 }
             }
-        }
-    }
+            .onChange(of: selectedItem) { newItem in
+                Task {
+                    guard let item = newItem else { return }
+                    isAnalyzing = true
+                    analysisSuccessMessage = nil
+                    analysisErrorMessage = nil
 
-    private func categoryName(for index: Int) -> String {
-        switch index {
-        case 0: return "勉強"
-        case 1: return "筋トレ"
-        case 2: return "作業"
-        case 3: return "ラン"
-        case 4: return "その他"
-        default: return ""
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            self.selectedImageData = data
+                            self.selectedImage = UIImage(data: data)
+                        }
+
+                        // Run Vision AI Image classification in background
+                        AIImageVerificationService.verifyImage(imageData: data, category: habitName) { success, message in
+                            Task { @MainActor in
+                                self.isAnalyzing = false
+                                if success {
+                                    self.analysisSuccessMessage = message
+                                    HapticService.shared.playSuccess()
+                                } else {
+                                    self.analysisErrorMessage = message
+                                    HapticService.shared.playWarning()
+                                }
+                            }
+                        }
+                    } else {
+                        await MainActor.run {
+                            self.isAnalyzing = false
+                            self.analysisErrorMessage = "画像の読み込みに失敗しました。"
+                        }
+                    }
+                }
+            }
         }
     }
 }
