@@ -1,0 +1,93 @@
+name: Habet
+options:
+  bundleIdPrefix: com.sl21ku
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+targets:
+  Habet:
+    type: application
+    platform: iOS
+    sources:
+      - Habet
+    info:
+      path: Habet/Support/Info.plist
+      properties:
+        CFBundleDisplayName: Habet
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        NSSupportsLiveActivities: true
+    entitlements:
+      path: Habet/Support/Habet.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.sl21ku.Habet
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sl21ku.Habet
+        INFOPLIST_FILE: Habet/Support/Info.plist
+    dependencies:
+      - target: HabetWidgetExtension
+        embed: true
+
+  HabetWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - HabetWidgetExtension
+      - Habet/Models/HabetWidgetAttributes.swift
+    info:
+      path: HabetWidgetExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Habet Widget
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: HabetWidgetExtension/HabetWidgetExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.sl21ku.Habet
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sl21ku.Habet.WidgetExtension
+        INFOPLIST_FILE: HabetWidgetExtension/Info.plist
+
+  HabetTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests/HabetTests
+    dependencies:
+      - target: Habet
+
+  HabetUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - Tests/HabetUITests
+    dependencies:
+      - target: Habet
+    settings:
+      base:
+        TEST_TARGET_NAME: Habet
+
+schemes:
+  Habet:
+    build:
+      targets:
+        Habet: all
+        HabetWidgetExtension: all
+        HabetTests: [test]
+        HabetUITests: [test]
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - name: HabetTests
+        - name: HabetUITests
